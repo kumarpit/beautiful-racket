@@ -1,0 +1,106 @@
+#lang plai
+
+;; Reverse Polish Math!
+;; PLAI Scheme implementation of the "stacker" language,
+;; based on concepts I learned in my "Definition of Programming
+;; Languages" class and the PLAI book by Shriram Krishnamurthi
+
+;; More on Reverse Polish Notation: https://en.wikipedia.org/wiki/Reverse_Polish_notation
+
+(define-type RPN
+    [num (n number?)]
+    [add (l RPN?) (r RPN?)]
+    [sub (l RPN?) (r RPN?)]
+    [mul (l RPN?) (r RPN?)])
+;; interp. program in the RPN language, corresponding to the following
+;; Backus-Naur Form (BNF)-ish specification
+;;  <RPN> ::= <num> 
+;;          | <RPN> <RPN> +
+;;          | <RPN> <RPN> -
+;;          | <RPN> <RPN> *
+
+(define RPN1 (num 1))
+(define RPN2 (num -2))
+(define RPN3 (add (num 1) (num 4)))
+(define RPN4 (mul RPN1 (add RPN2 RPN3)))
+
+;; RPN Template
+#;
+(define (fn-for-rpm rpn)
+    (type-case RPN rpn
+        [num (n) (...n)]
+        [add (l r) (... (fn-for-rpn l)
+                        (fn-for-rpn r))]
+        [sub (l r) (... (fn-for-rpn l)
+                        (fn-for-rpn r))]
+        [mul (l r) (... (fn-for-rpn l)
+                        (fn-for-rpn r))]))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Stack
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Stack is (listof RPN)
+;; interp. an implementation of the stack data structure
+(define stack empty)
+
+;; return most recently added element
+(define (pop-stack!)
+  (define arg (first stack))
+  (set! stack (rest stack))
+  arg)
+
+;; add to the beginning of the stack
+(define (push-stack! arg)
+  (set! stack (cons arg stack)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parsing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; RPNFS (RPN-focused s-expression) is one of:
+;; - Number
+;; - `,RPNFS ,RPNFS +
+;; - `,RPNFS ,RPNFS -
+;; - `,RPNFS ,RPNFS *
+;; - <any other s-expression>
+;; interp.  a symbolic expression, but with a focus on those that
+;; represent RPN expressions.
+
+;; (listof Number or Symbol) -> RPN
+;; produce a RPN value corresponding to the given RPN s-expression
+;; Effect: 1) signals an error if the given s-exp does not represent a
+;;            valid RPN
+;;         2) modifies the stack
+(define (parse/rpn rpn)
+    (cond 
+        [(empty? rpn) (pop-stack!)]
+        [else 
+            (let ([arg  (first rpn)]
+                  [rst  (rest  rpn)])
+                (cond
+                    [(number? arg) 
+                        (push-stack! (num arg))]
+                    [(eq? '+ arg) 
+                        (push-stack! (add (pop-stack!) (pop-stack!)))]
+                    [(eq? '- arg) 
+                        (push-stack! (sub (pop-stack!) (pop-stack!)))]
+                    [(eq? '* arg) 
+                        (push-stack! (mul (pop-stack!) (pop-stack!)))]
+                    [else 
+                        (error "Bad RPN")])
+                (parse/rpn rst))]))
+
+(test (parse/rpn '(5)) (num 5))
+(test (parse/rpn '(5 4 +))
+      (add (num 4) (num 5)))
+;; todo: add more tests
+              
+
+
+
+
+
+

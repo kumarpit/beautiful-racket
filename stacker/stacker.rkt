@@ -33,8 +33,6 @@
   (define module-datum `(module stacker-mod "stacker.rkt" ,@src-datums))
   (datum->syntax #f module-datum))
 
-;; examples!!!
-
 (provide read-syntax)
 
 (define-macro (stacker-module-begin HANDLE-EXPR ...)
